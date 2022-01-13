@@ -25,7 +25,7 @@ class TemplateManager
         {
             $_quoteFromRepository = QuoteRepository::getInstance()->getById($quote->id);
 
-            $usefulObject = SiteRepository::getInstance()->getById($quote->siteId);
+            $website = SiteRepository::getInstance()->getById($quote->siteId);
             $destinationOfQuote = DestinationRepository::getInstance()->getById($quote->destinationId);
 
             $containsDestinationLink = strpos($text, '[quote:destination_link]');
@@ -56,16 +56,23 @@ class TemplateManager
             $containsDestinationName = strpos($text, '[quote:destination_name]');
 
             if($containsDestinationName){
-                $text = str_replace('[quote:destination_name]',$destinationOfQuote->countryName,$text);
+                $text = str_replace(
+                    '[quote:destination_name]',
+                    $destinationOfQuote->countryName,
+                    $text
+                );
             }
 
-        }
+            if (isset($destination)){
+                $text = str_replace(
+                    '[quote:destination_link]',
+                    $website->url . '/' . $destination->countryName . '/quote/' . $_quoteFromRepository->id,
+                    $text);
+            }
+            else{
+                $text = str_replace('[quote:destination_link]', '', $text);
+            }
 
-        if (isset($destination)){
-            $text = str_replace('[quote:destination_link]', $usefulObject->url . '/' . $destination->countryName . '/quote/' . $_quoteFromRepository->id, $text);
-        }
-        else{
-            $text = str_replace('[quote:destination_link]', '', $text);
         }
 
 
@@ -81,4 +88,5 @@ class TemplateManager
 
         return $text;
     }
+
 }
