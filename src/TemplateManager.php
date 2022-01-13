@@ -2,7 +2,7 @@
 
 class TemplateManager
 {
-    public function getTemplateComputed(Template $tpl, array $data)
+    public function getTemplateComputed(Template $tpl, array $data): Template
     {
         if (!$tpl) {
             throw new \RuntimeException('no tpl given');
@@ -15,57 +15,68 @@ class TemplateManager
         return $replaced;
     }
 
-    private function computeText($text, array $data)
+    private function computeText($text, array $data): string
     {
         $APPLICATION_CONTEXT = ApplicationContext::getInstance();
 
-        $quote = (isset($data['quote']) and $data['quote'] instanceof Quote) ? $data['quote'] : null;
+        $quote = (isset($data['quote']) && $data['quote'] instanceof Quote) ? $data['quote'] : null;
 
         if ($quote)
         {
             $_quoteFromRepository = QuoteRepository::getInstance()->getById($quote->id);
-            var_dump($_quoteFromRepository);
+
             $usefulObject = SiteRepository::getInstance()->getById($quote->siteId);
             $destinationOfQuote = DestinationRepository::getInstance()->getById($quote->destinationId);
 
-            if(strpos($text, '[quote:destination_link]') !== false){
+            $containsDestinationLink = strpos($text, '[quote:destination_link]');
+
+            if($containsDestinationLink){
                 $destination = DestinationRepository::getInstance()->getById($quote->destinationId);
             }
 
             $containsSummaryHtml = strpos($text, '[quote:summary_html]');
             $containsSummary     = strpos($text, '[quote:summary]');
 
-            if ($containsSummaryHtml !== false || $containsSummary !== false) {
-                if ($containsSummaryHtml !== false) {
-                    $text = str_replace(
-                        '[quote:summary_html]',
-                        Quote::renderHtml($_quoteFromRepository),
-                        $text
-                    );
-                }
-                if ($containsSummary !== false) {
-                    $text = str_replace(
-                        '[quote:summary]',
-                        Quote::renderText($_quoteFromRepository),
-                        $text
-                    );
-                }
+            if ($containsSummaryHtml) {
+                $text = str_replace(
+                    '[quote:summary_html]',
+                    Quote::renderHtml($_quoteFromRepository),
+                    $text
+                );
             }
 
-            (strpos($text, '[quote:destination_name]') !== false) and $text = str_replace('[quote:destination_name]',$destinationOfQuote->countryName,$text);
+            if ($containsSummary) {
+                $text = str_replace(
+                    '[quote:summary]',
+                    Quote::renderText($_quoteFromRepository),
+                    $text
+                );
+            }
+
+            $containsDestinationName = strpos($text, '[quote:destination_name]');
+
+            if($containsDestinationName){
+                $text = str_replace('[quote:destination_name]',$destinationOfQuote->countryName,$text);
+            }
+
         }
-        if (isset($destination))
+
+        if (isset($destination)){
             $text = str_replace('[quote:destination_link]', $usefulObject->url . '/' . $destination->countryName . '/quote/' . $_quoteFromRepository->id, $text);
-        else
+        }
+        else{
             $text = str_replace('[quote:destination_link]', '', $text);
+        }
+
 
         /*
          * USER
          * [user:*]
          */
         $_user  = (isset($data['user'])  and ($data['user']  instanceof User))  ? $data['user']  : $APPLICATION_CONTEXT->getCurrentUser();
-        if($_user) {
-            (strpos($text, '[user:first_name]') !== false) and $text = str_replace('[user:first_name]'       , ucfirst(mb_strtolower($_user->firstname)), $text);
+        $containsFirstName = strpos($text, '[user:first_name]');
+        if($_user && $containsFirstName) {
+            $text = str_replace('[user:first_name]', ucfirst(mb_strtolower($_user->firstname)), $text);
         }
 
         return $text;
